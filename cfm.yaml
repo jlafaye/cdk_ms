@@ -1,0 +1,26 @@
+project:
+  - name: data-ms-primebrokerage
+  - team: it-data-financial
+  - author: msalor
+  - language: python
+  - type: package
+
+python:
+  - package: data_ms_primebrokerage
+
+docs:
+  - tool: sphinx
+  - directory: docs
+
+sonar:
+  - name: it-data-financial.data-ms-primebrokerage
+  - key: it-data-financial.data-ms-primebrokerage
+
+repository:
+  - host: https://repository.development.cfm.fr
+  - space: it-data-platform/ENVIRONMENT_VERSION
+  - user: it-data-platform
+
+about:
+  - created: 2023-04-18
+  - description:
