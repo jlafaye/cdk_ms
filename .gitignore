@@ -3,4 +3,6 @@
 **/__pycache__/
 *.egg-info/
 activate_*
+**/cdk/build/
+**/cdk/cdk.out/
 
