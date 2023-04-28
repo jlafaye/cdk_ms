@@ -1,0 +1,14 @@
+# Python Style format
+black
+flake8
+flake8-black
+isort
+
+# Python Test
+pylint
+coverage
+mock
+moto
+pytest
+pytest-cov
+pytest-mock

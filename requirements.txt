@@ -1,1 +1,4 @@
-# put requirements here
+### <!-- BEGIN LAMBDA_DEPENDENCIES --!> ###
+#fsspec
+#s3fs
+### <!-- END LAMBDA_DEPENDENCIES --!> ###

@@ -2,7 +2,7 @@
 .vscode
 **/__pycache__/
 *.egg-info/
+*.eggs/
 activate_*
-**/cdk/build/
-**/cdk/cdk.out/
-
+**/cdk.out/
+**/build/

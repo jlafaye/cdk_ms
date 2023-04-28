@@ -1,0 +1,12 @@
+[tool.black]
+line-length = 120
+exclude = "/(build|cdk.out)/"
+
+[flake8]
+max-line-length = 120
+exclude = ".tox,.eggs,build,dist"
+
+[tool.pytest.ini_options]
+pythonpath = ["src", ".."]
+markers = ["not full"]
+addopts = "--junit-xml=./build/report/junit.xml  -p no:cacheprovider -v --doctest-modules --cov-config .coveragerc --cov-report html --cov-report xml"

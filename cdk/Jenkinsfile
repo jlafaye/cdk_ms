@@ -1,0 +1,45 @@
+import org.cfm.Configuration
+
+node('data083.vm.cfm.fr') {
+  String teamId = 'it-financial'
+  String projectId = 'data-ms-primebrokerage'
+  String folderId = 'cdk'
+
+  Configuration cdk_config = apm_aws.create_cdk_configuration(folderId)
+
+  cdk_config.pipeline.scm_uri = "insys:git@gitlab.fr.cfm.fr:it-data-platform/dataset/${projectId}.git"
+  apm_aws.set_branch_mapping(cdk_config, [dev: 'dev', staging: 'staging', prod: 'master'])
+  apm_aws.attach_webhook(cdk_config, "${teamId}_${projectId}_${folderId}")
+
+  apm_aws.deploy_on_success(cdk_config, 'dev')
+  apm_aws.deploy_on_success(cdk_config, 'staging')
+  apm_aws.deploy_on_tag(cdk_config, 'prod', "^${folderId}-prod-[0-9]+.[0-9]+.[0-9]+\$", 5)
+
+  cdk_config.custom_stages['cdk-app-env'] = { config -> stage_cdk_env(config) }
+  cdk_config.custom_stages['cdk-app-tests'] = { config -> stage_cdk_tests(config) }
+  cdk_config.custom_stages['cdk-app-packages'] = { config -> stage_cdk_packages(config) }
+  apm_aws.add_cdk_stages(cdk_config)
+
+  apm_aws.run_aws_pipeline(cdk_config)
+}
+
+int stage_cdk_env(Configuration aws_config) {
+  // env
+  return apm_aws.aws_run_sh(aws_config, 'AWS - cdk app env', '''
+    make app/update_env
+    ''')
+}
+
+int stage_cdk_tests(Configuration aws_config) {
+  // tests
+  return apm_aws.aws_run_sh(aws_config, 'AWS - cdk app tests', '''
+    make coverage
+    ''')
+}
+
+int stage_cdk_packages(Configuration aws_config) {
+  // packages
+  return apm_aws.aws_run_sh(aws_config, 'AWS - cdk app packages', '''
+    make app/clean app/lambda app/spark
+    ''')
+}

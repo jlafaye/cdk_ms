@@ -1,0 +1,4 @@
+[html]
+directory=build/coverage
+[xml]
+output=build/report/coverage.xml

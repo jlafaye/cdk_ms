@@ -1,0 +1,14 @@
+# AWS Tools
+awscli>=1.0,<2.0
+cdk>=2.67,<3.0
+
+# CDK Libs
+constructs>=10.0,<11.0
+aws-cdk-lib>=2.67,<3.0
+
+# CFM Libs
+cfm-vault
+cfm-cdk-utils>=2.3,<2.4
+
+# DataLake Libs
+aws-dl-utils>=0.3,<0.4
