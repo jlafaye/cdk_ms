@@ -52,5 +52,5 @@ class DataPipelineStack(DlBaseStack):
             kms_key_s3=kms_key_s3,
             vpc=vpc,
             public_subnets=private_subnets,
-            env=self.stack_config.env
+            env=self.stack_config.env,
         )
