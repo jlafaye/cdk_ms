@@ -199,7 +199,7 @@ class Processor():
             log.info(f'Found {deltas.shape} deltas')
             out = pd.concat([self.df_existing, deltas], axis=0)
         except NoFilesFound:
-            log.info(f'No existing files')
+            log.info('No existing files')
             out = self.df_incoming
 
         if not deltas.empty:
@@ -233,4 +233,3 @@ def compact_dataset(path: str):
     " Compact the dataset at a given path "
     df = awswrangler.s3.read_parquet(path)
     awswrangler.s3.to_parquet(df, path, mode='overwrite', partition_cols=[], dataset=True)
-

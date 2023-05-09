@@ -11,8 +11,7 @@ class FtypeSettings:
     table: str
 
 
-# ENV = os.environ['...']
-ENV = 'dev'
+ENV = os.getenv('ENV', 'dev')
 DATABASE = f'financial_{ENV}_link'
 
 settings = {
