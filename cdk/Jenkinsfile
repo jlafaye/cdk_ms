@@ -16,7 +16,7 @@ node('data083.vm.cfm.fr') {
   apm_aws.deploy_on_tag(cdk_config, 'prod', "^${folderId}-prod-[0-9]+.[0-9]+.[0-9]+\$", 5)
 
   cdk_config.custom_stages['cdk-app-env'] = { config -> stage_cdk_env(config) }
-  //cdk_config.custom_stages['cdk-app-tests'] = { config -> stage_cdk_tests(config) }
+  //cdk_config.custom_stages['cdk-app-tests'] = { config -> stage_cdk_tests(config) } # to be added
   cdk_config.custom_stages['cdk-app-packages'] = { config -> stage_cdk_packages(config) }
   apm_aws.add_cdk_stages(cdk_config)
 
