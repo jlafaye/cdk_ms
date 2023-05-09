@@ -24,7 +24,7 @@ settings = {
     ),
     'regional_leverage': FtypeSettings(
         output_path='s3://cfm-financial-gold-dev/morganstanley_pb/regional_leverage',
-        frequency='D',
+        frequency='W',
         database=DATABASE,
         table='morgan_stanley_pb_regional_leverage'
     ),
