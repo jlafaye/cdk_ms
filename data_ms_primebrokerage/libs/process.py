@@ -9,6 +9,7 @@ from data_ms_primebrokerage.libs.error import AssertCollector
 import awswrangler
 from awswrangler.exceptions import NoFilesFound
 import logging
+import pytz
 
 
 logging.basicConfig(
@@ -46,10 +47,10 @@ def add_cfm_columns(
     df: pd.DataFrame,
     date_type: Literal['PIT', 'HIST'],
     bday_lag: int = 1,
-    hours_lag: int = 5
+    hours_lag: int = 9
 ):
     " Add generic CFM dates for point in time | Add IN PLACE "
-    df['CFM_INSERT_DATE'] = datetime.now()
+    df['CFM_INSERT_DATE'] = datetime.now(pytz.timezone('Europe/Paris'))
     df["CFM_DATE_TYPE"] = date_type
     if date_type == "PIT":
         df["CFM_ADJUST_DATE"] = pd.NaT
@@ -144,6 +145,8 @@ class Processor():
         Check the schema of the destination against the schema of the incoming dataframe.
         """
         path = self.settings[self.ftype].output_path
+        table = self.settings[self.ftype].table
+        database = self.settings[self.ftype].database
         log.info(f'Writting {output.shape} dataframe to {path}')
         try:
             awswrangler.s3.read_parquet(path)
@@ -156,6 +159,8 @@ class Processor():
             path,
             partition_cols=[],
             dataset=True,
+            table=table,
+            database=database,
             mode='append'
         )
 
@@ -194,7 +199,7 @@ class Processor():
             log.info(f'Found {deltas.shape} deltas')
             out = pd.concat([self.df_existing, deltas], axis=0)
         except NoFilesFound:
-            log.info(f'No existing files')
+            log.info('No existing files')
             out = self.df_incoming
 
         if not deltas.empty:
@@ -228,4 +233,3 @@ def compact_dataset(path: str):
     " Compact the dataset at a given path "
     df = awswrangler.s3.read_parquet(path)
     awswrangler.s3.to_parquet(df, path, mode='overwrite', partition_cols=[], dataset=True)
-

@@ -2,3 +2,5 @@
 #fsspec
 #s3fs
 ### <!-- END LAMBDA_DEPENDENCIES --!> ###
+pandas
+awswrangler

@@ -13,3 +13,12 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> str:
 
     handler = getattr(lambdas, "handler")
     return handler(event, context)
+
+
+def lambda_handler_weekly(event: Dict[str, Any], context: Any) -> str:
+    app_name = os.environ["APP_PACKAGE"]
+
+    lambdas = import_module(f"{app_name}.main")
+
+    handler = getattr(lambdas, "handler_compact")
+    return handler(event, context)
