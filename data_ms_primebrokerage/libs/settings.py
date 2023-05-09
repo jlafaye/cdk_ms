@@ -1,37 +1,56 @@
 from dataclasses import dataclass
 from typing import Literal
+import os
 
 
 @dataclass()
 class FtypeSettings:
     output_path: str
     frequency: str
+    database: str
+    table: str
 
+
+# ENV = os.environ['...']
+ENV = 'dev'
+DATABASE = f'financial_{ENV}_link'
 
 settings = {
     'country_level_exposure': FtypeSettings(
         output_path='s3://cfm-financial-gold-dev/morganstanley_pb/country',
-        frequency='W'
+        frequency='W',
+        database=DATABASE,
+        table='morgan_stanley_pb_country_level_exposure'
     ),
     'regional_leverage': FtypeSettings(
         output_path='s3://cfm-financial-gold-dev/morganstanley_pb/regional_leverage',
-        frequency='D'
+        frequency='D',
+        database=DATABASE,
+        table='morgan_stanley_pb_regional_leverage'
     ),
     'sector_exposure_europe':  FtypeSettings(
         output_path='s3://cfm-financial-gold-dev/morganstanley_pb/sector_exposure_eu',
-        frequency='W'
+        frequency='W',
+        database=DATABASE,
+        table='morgan_stanley_pb_sector_exposure_europe'
     ),
     'sector_exposure_north_america':  FtypeSettings(
         output_path='s3://cfm-financial-gold-dev/morganstanley_pb/sector_exposure_na',
-        frequency='W'
+        frequency='W',
+        database=DATABASE,
+        table='morgan_stanley_pb_sector_exposure_north_america'
     ),
     'factor_exposure': FtypeSettings(
         output_path='s3://cfm-financial-gold-dev/morganstanley_pb/factor_exposure',
-        frequency='W'
+        frequency='W',
+        database=DATABASE,
+        table='morgan_stanley_pb_factor_exposure'
     ),
     'longshort_leverage': FtypeSettings(
         output_path='s3://cfm-financial-gold-dev/morganstanley_pb/long_short_leverage',
-        frequency='D'
+        frequency='D',
+        database=DATABASE,
+        table='morgan_stanley_pb_longshort_leverage'
     )
 }
 
