@@ -26,7 +26,7 @@ def extract_sector_region_from_fname(fname: str) -> Literal["NorthAmerica", "Eur
 
 
 def extract_fdate_from_fname(fname: str) -> date:
-    fdate_re = re.compile(r"\.(\d{8}).csv")
+    fdate_re = re.compile(r"\.(\d{8})\.")
     fdates = fdate_re.findall(fname)
     assert len(fdates) == 1
     return pd.to_datetime(fdates[0]).to_pydatetime().date()
