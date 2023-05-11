@@ -183,7 +183,7 @@ class LambdasComponent(Construct):
         rule.add_target(LambdaFunction(self.app_weekly))
 
         # TODO : use Alerting stack outputs
-        alerting_lambda_name = "cfm_logs_lambda_function"
+        alerting_lambda_name = "cfm_alerting_lambda_function"
 
         func = aws_lambda.Function.from_function_name(
             self,
