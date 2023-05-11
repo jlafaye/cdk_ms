@@ -25,6 +25,7 @@ from aws_dl_utils.models.cdk_output import (
     KmsKeyOutput,
 )
 from constructs import Construct
+from aws_dl_utils.dl_output.dl_commons_output import DlCommonsOutput
 
 
 class LambdasComponent(Construct):
@@ -42,6 +43,8 @@ class LambdasComponent(Construct):
         env: str,
     ) -> None:
         super().__init__(scope, id_)
+
+        dl_commons_output = DlCommonsOutput(construct=self)
 
         lambda_name = app_config.application_name
         lambda_name_weekly = f"{lambda_name}_weekly"
@@ -182,19 +185,11 @@ class LambdasComponent(Construct):
         # Add the Lambda function as a target for the rule
         rule.add_target(LambdaFunction(self.app_weekly))
 
-        # TODO : use Alerting stack outputs
-        alerting_lambda_name = "cfm_alerting_lambda_function"
-
-        func = aws_lambda.Function.from_function_name(
-            self,
-            id="AlertingLambdaFunction",
-            function_name=alerting_lambda_name,
-        )
         # Alerting CFM integration :
         logs.SubscriptionFilter(
             self,
             id="SubscriptionFilterToCFMAlerting",
-            destination=destinations.LambdaDestination(func, add_permissions=False),
+            destination=destinations.LambdaDestination(dl_commons_output.lambda_alerting.this, add_permissions=False),
             filter_pattern=FilterPattern.any_term("ERROR", "Error", "error"),
             log_group=log_group,
         )

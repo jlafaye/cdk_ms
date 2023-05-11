@@ -2,5 +2,8 @@
 #fsspec
 #s3fs
 ### <!-- END LAMBDA_DEPENDENCIES --!> ###
+
+### <!-- BEGIN DATA_DEPENDENCIES --!> ###
 pandas
 awswrangler
+### <!-- END DATA_DEPENDENCIES --!> ###
