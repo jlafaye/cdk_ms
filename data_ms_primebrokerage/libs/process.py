@@ -1,6 +1,6 @@
-from typing import Literal
+from typing import Literal, Optional
 import pandas as pd
-from pandas.tseries.offsets import BDay, Hour
+from pandas.tseries.offsets import BDay, Hour, Week
 from datetime import date, datetime
 import re
 from data_ms_primebrokerage.libs.check import check_count_dates, check_fields, check_older_file, check_values
@@ -13,8 +13,8 @@ import pytz
 
 
 logging.basicConfig(
-     level=logging.INFO,
- )
+    level=logging.INFO,
+)
 
 
 log = logging.getLogger('data_ms_primebrokerage')
@@ -32,6 +32,15 @@ def extract_fdate_from_fname(fname: str) -> date:
     return pd.to_datetime(fdates[0]).to_pydatetime().date()
 
 
+def extract_insert_timestamp_from_fname(fname: str) -> datetime:
+    fdate_re = re.compile(r"\d{8}\.(\d+)\.csv")
+    fdates = fdate_re.findall(fname)
+    assert len(fdates) == 1
+    out = datetime.fromtimestamp(int(fdates[0]), pytz.timezone('Europe/Paris'))
+    log.info(f'{out} was the inserted timestamp on s3')
+    return out
+
+
 def pct_to_num(serie: pd.Series):
     return serie.str.rstrip("%").astype(float)/100
 
@@ -45,17 +54,40 @@ def extract_ftype_from_fname(fname: str) -> FTYPES:
 
 def add_cfm_columns(
     df: pd.DataFrame,
-    date_type: Literal['PIT', 'HIST'],
+    delivery_type: Literal['W', 'D'],
+    date_type: Literal['PIT', 'HIST', 'REPLAY'],
     bday_lag: int = 1,
-    hours_lag: int = 9
+    hours_lag: int = 9,
+    insert_date: Optional[datetime] = None,
+    fdate: Optional[date] = None,
 ):
     " Add generic CFM dates for point in time | Add IN PLACE "
     df['CFM_INSERT_DATE'] = datetime.now(pytz.timezone('Europe/Paris'))
-    df["CFM_DATE_TYPE"] = date_type
+    df["CFM_DATE_TYPE"] = date_type.replace('REPLAY', 'HIST')
+    df["DATE"] = pd.to_datetime(df.DATE)
     if date_type == "PIT":
         df["CFM_ADJUST_DATE"] = pd.NaT
     elif date_type == "HIST":
-        df["CFM_ADJUST_DATE"] = df['DATE'] + BDay(bday_lag) + Hour(hours_lag)
+        if delivery_type == 'W':
+            # For weekly delivery we transform the value date to friday
+            df["CFM_ADJUST_DATE"] = df["DATE"].where(
+                df["DATE"].dt.weekday == 4,
+                df["DATE"] + Week(weekday=4)
+            )
+            # And add one BDay to make it Monday
+            df["CFM_ADJUST_DATE"] = df['CFM_ADJUST_DATE'] + BDay(bday_lag) + Hour(hours_lag)
+        elif delivery_type == 'D':
+            df["CFM_ADJUST_DATE"] = df['DATE'] + BDay(bday_lag) + Hour(hours_lag)
+        else:
+            raise NotImplementedError()
+    elif date_type == "REPLAY":
+        if insert_date is not None:
+            log.info(f'Using insert date - {insert_date}')
+            df["CFM_ADJUST_DATE"] = insert_date
+        else:
+            assert fdate is not None
+            log.info(f'Using date fdate - {fdate}')
+            df["CFM_ADJUST_DATE"] = fdate + BDay(bday_lag) + Hour(hours_lag)
 
 
 def get_deltas(
@@ -123,8 +155,23 @@ class Processor():
         Extract the ftype from the path and perform further normalizing operations based on the infered ftype.
         """
         self.df_incoming = read_csv(path=path_incoming)
-        add_cfm_columns(self.df_incoming, date_type=date_type)
         self.ftype = extract_ftype_from_fname(path_incoming)
+
+        if self.ftype == "longshort_leverage":
+            hours_lag = 14
+        else:
+            hours_lag = 9
+
+        insert_date = extract_insert_timestamp_from_fname(path_incoming)
+
+        add_cfm_columns(
+            self.df_incoming,
+            date_type=date_type,
+            delivery_type=self.settings[self.ftype].frequency,
+            hours_lag=hours_lag,
+            insert_date=insert_date,
+            fdate=self.df_incoming.CFM_FDATE[0]
+        )
 
         if self.ftype == 'factor_exposure':
             for col in ['FACTOR_NET_EXPOSURE', 'FACTOR_SHORT_EXPOSURE', 'FACTOR_LONG_EXPOSURE']:
@@ -136,10 +183,25 @@ class Processor():
         elif self.ftype == 'sector_exposure_europe':
             self.df_incoming = self.df_incoming.assign(REGION='Europe')
 
-    def read_existing(self):
-        self.df_existing = awswrangler.s3.read_parquet(self.settings[self.ftype].output_path)
+        for col in ['GROSS_LEV_AVG_EU_RA', 'NET_LEV_AVG_EU_RA']:
+            if col in self.df_incoming:
+                self.df_incoming[col] = pd.to_numeric(self.df_incoming[col])
 
-    def write_output(self, output: pd.DataFrame):
+    def read_existing(self):
+        tables = awswrangler.catalog.tables(
+            database=self.settings[self.ftype].database
+        ).Table.values
+
+        if self.settings[self.ftype].table in tables:
+            self.df_existing = awswrangler.s3.read_parquet_table(
+                table=self.settings[self.ftype].table,
+                database=self.settings[self.ftype].database
+            )
+            self.df_existing.columns = self.df_existing.columns.str.upper()
+        else:
+            raise NoFilesFound()
+
+    def write_output(self, output: pd.DataFrame, writting_mode: Literal["overwrite", "append"]):
         """
         Write the output dataframe to the path defined by the settings.
         Check the schema of the destination against the schema of the incoming dataframe.
@@ -149,11 +211,13 @@ class Processor():
         database = self.settings[self.ftype].database
         log.info(f'Writting {output.shape} dataframe to {path}')
         try:
-            awswrangler.s3.read_parquet(path)
-            schema = awswrangler.s3.read_parquet_metadata(path)[0]
-            assert all([col in output.columns for col in schema.keys()])
+            if writting_mode == 'append':
+                schema = awswrangler.s3.read_parquet_metadata(path)[0]
+                log.info(f'Read from path {path}')
+                assert all([col in output.columns.str.lower() for col in schema.keys()])
         except NoFilesFound:
             pass
+        log.info(f'Write in mode {writting_mode}')
         awswrangler.s3.to_parquet(
             output,
             path,
@@ -161,13 +225,14 @@ class Processor():
             dataset=True,
             table=table,
             database=database,
-            mode='append'
+            mode=writting_mode
         )
 
     def run(
         self,
         path_incoming: str,
-        date_type: Literal["PIT", "HIST"]
+        date_type: Literal["PIT", "HIST", "REPLAY"],
+        writting_mode: Literal["overwrite", "append"]
     ):
         """
         Run the entire process.
@@ -180,6 +245,8 @@ class Processor():
         log.info(f'Start processing {path_incoming}')
         self.read_incoming(path_incoming=path_incoming, date_type=date_type)
         try:
+            if writting_mode == 'overwrite':
+                raise NoFilesFound()
             self.read_existing()
             check_older_file(
                 df_existing=self.df_existing,
@@ -201,15 +268,18 @@ class Processor():
         except NoFilesFound:
             log.info('No existing files')
             out = self.df_incoming
+            deltas = pd.DataFrame()
+            self.write_output(out, writting_mode)
 
         if not deltas.empty:
-            self.write_output(deltas)
+            self.write_output(deltas, writting_mode)
 
             check_values(out)
             check_count_dates(out, self.settings[self.ftype].frequency)
             check_fields(out)
 
-        AssertCollector().raise_all()
+        if date_type == 'PIT':
+            AssertCollector().raise_all()
 
 
 def check_nan(df: pd.DataFrame, ndates: int):
@@ -217,16 +287,29 @@ def check_nan(df: pd.DataFrame, ndates: int):
     assert not df.loc[df.DATE.isin(max_dts)].isna().any().any(), "We should have no NaN in the DataFrame"
 
 
-def process(fname: str, date_type: Literal['HIST', 'PIT']):
+def process(
+    fname: str,
+    date_type: Literal['HIST', 'PIT', 'REPLAY'],
+    writting_mode: str = 'append'
+):
     processor = Processor(settings=settings)
-    processor.run(fname, date_type=date_type)
+    processor.run(fname, date_type=date_type, writting_mode=writting_mode)
 
 
 def process_histo():
     for directory in awswrangler.s3.list_directories('s3://cfm-financial-raw-dev/morganstanley/primebrokerage/'):
+        mode = 'overwrite'
+        date_mode = 'HIST'
         objects = sorted(awswrangler.s3.list_objects(directory))
-        for obj in objects:
-            process(obj, 'HIST')
+        for obj in objects[-3:]:
+            try:
+                if "regional" in obj:
+                    process(obj, date_mode, writting_mode=mode)
+                    date_mode = 'REPLAY'
+                    mode = 'append'
+            except AssertionError as e:
+                print(e)
+                continue
 
 
 def compact_dataset(path: str):

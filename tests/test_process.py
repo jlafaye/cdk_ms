@@ -1,6 +1,7 @@
 import pandas as pd
+from datetime import date
 
-from data_ms_primebrokerage.libs.process import get_deltas
+from data_ms_primebrokerage.libs.process import add_cfm_columns, get_deltas
 
 
 def test_get_deltas():
@@ -29,3 +30,19 @@ def test_get_deltas():
         'KEY': [1, 2, 4, 5],
     })
     assert out.equals(expected)
+
+
+def test_add_dates():
+    df = pd.DataFrame({
+        "DATE": [date(2023, 5, 11), date(2023, 5, 12)],
+        "VALUE": [1, 2]
+    })
+    add_cfm_columns(df, delivery_type='W', date_type='HIST')
+    assert all(df.CFM_ADJUST_DATE.dt.date == date(2023, 5, 15))
+    df = pd.DataFrame({
+        "DATE": [date(2023, 5, 11), date(2023, 5, 12)],
+        "VALUE": [1, 2]
+    })
+    add_cfm_columns(df, delivery_type='D', date_type='HIST')
+    assert df.CFM_ADJUST_DATE.dt.date[0] == date(2023, 5, 12)
+    assert df.CFM_ADJUST_DATE.dt.date[1] == date(2023, 5, 15)
