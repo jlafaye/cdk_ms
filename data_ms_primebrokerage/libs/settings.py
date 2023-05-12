@@ -12,7 +12,7 @@ class FtypeSettings:
 
 
 ENV = os.getenv('ENV', 'dev')
-DATABASE = f'financial_{ENV}_link'
+DATABASE = f'financial_{ENV}_link' if ENV != 'prod' else 'financial_link'
 
 settings = {
     'country_level_exposure': FtypeSettings(
