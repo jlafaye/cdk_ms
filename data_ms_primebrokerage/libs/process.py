@@ -301,12 +301,11 @@ def process_histo():
         mode = 'overwrite'
         date_mode = 'HIST'
         objects = sorted(awswrangler.s3.list_objects(directory))
-        for obj in objects[-3:]:
+        for obj in objects:
             try:
-                if "regional" in obj:
-                    process(obj, date_mode, writting_mode=mode)
-                    date_mode = 'REPLAY'
-                    mode = 'append'
+                process(obj, date_mode, writting_mode=mode)
+                date_mode = 'REPLAY'
+                mode = 'append'
             except AssertionError as e:
                 print(e)
                 continue
