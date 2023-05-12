@@ -296,8 +296,8 @@ def process(
     processor.run(fname, date_type=date_type, writting_mode=writting_mode)
 
 
-def process_histo():
-    for directory in awswrangler.s3.list_directories('s3://cfm-financial-raw-dev/morganstanley/primebrokerage/'):
+def process_histo(env: str):
+    for directory in awswrangler.s3.list_directories(f's3://cfm-financial-raw-{env}/morganstanley/primebrokerage/'):
         mode = 'overwrite'
         date_mode = 'HIST'
         objects = sorted(awswrangler.s3.list_objects(directory))
