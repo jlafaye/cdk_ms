@@ -19,13 +19,13 @@ from aws_cdk.aws_logs import (
     FilterPattern,
     RetentionDays,
 )
+from aws_dl_utils.dl_output.dl_commons_output import DlCommonsOutput
 from aws_dl_utils.models.cdk_config import CdkAppConfig
 from aws_dl_utils.models.cdk_output import (
     BucketOutput,
     KmsKeyOutput,
 )
 from constructs import Construct
-from aws_dl_utils.dl_output.dl_commons_output import DlCommonsOutput
 
 
 class LambdasComponent(Construct):
