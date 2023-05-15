@@ -7,7 +7,6 @@ from aws_cdk import (
     aws_iam as iam,
     aws_lambda as aws_lambda,
     aws_logs as logs,
-    aws_kms as kms,
     aws_s3 as s3,
     aws_s3_notifications as s3_notifications,
     Duration,
@@ -22,11 +21,6 @@ from aws_cdk.aws_logs import (
     FilterPattern,
     RetentionDays,
 )
-
-from aws_dl_utils.dl_output.dl_commons_output import DlCommonsOutput
-from aws_dl_utils.dl_output.dl_federated_output import DlFederatedOutput
-from aws_dl_utils.dl_output.dl_producers_output import DlProducersOutput
-
 from aws_dl_utils.models.cdk_config import CdkAppConfig
 from aws_dl_utils.models.cdk_output import (
     BucketOutput,
@@ -53,7 +47,6 @@ class LambdasComponent(Construct):
         env: str,
     ) -> None:
         super().__init__(scope, id_)
-
 
         lambda_name = app_config.application_name
         lambda_name_weekly = f"{lambda_name}_weekly"
@@ -99,7 +92,7 @@ class LambdasComponent(Construct):
                 ],
                 resources=[
                     kms_key_s3.arn,
-                    kms_federated_glue_key.arn,  # "arn:aws:kms:eu-west-1:936417342003:key/c1e03198-b540-45da-a4ea-1d056e16beb7"
+                    kms_federated_glue_key.arn,
                 ],
             ),
             iam.PolicyStatement(

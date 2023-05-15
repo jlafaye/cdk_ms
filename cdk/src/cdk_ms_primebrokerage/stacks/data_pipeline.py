@@ -13,17 +13,7 @@ from aws_dl_utils.models.cdk_output import (
 )
 from aws_dl_utils.models.dl_stack import DlBaseStack
 from constructs import Construct
-from aws_cdk import (
-    aws_ec2 as ec2,
-    aws_iam as iam,
-    aws_lambda as aws_lambda,
-    aws_logs as logs,
-    aws_kms as kms,
-    aws_s3 as s3,
-    aws_s3_notifications as s3_notifications,
-    Duration,
-    RemovalPolicy,
-)
+
 from cdk_ms_primebrokerage.components.lambdas.infrastructure import LambdasComponent
 
 
