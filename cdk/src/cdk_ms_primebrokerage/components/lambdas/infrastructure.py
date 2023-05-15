@@ -7,6 +7,9 @@ from aws_cdk import (
     aws_iam as iam,
     aws_lambda as aws_lambda,
     aws_logs as logs,
+    aws_kms as kms,
+    aws_s3 as s3,
+    aws_s3_notifications as s3_notifications,
     Duration,
     RemovalPolicy,
 )
@@ -19,11 +22,16 @@ from aws_cdk.aws_logs import (
     FilterPattern,
     RetentionDays,
 )
+
 from aws_dl_utils.dl_output.dl_commons_output import DlCommonsOutput
+from aws_dl_utils.dl_output.dl_federated_output import DlFederatedOutput
+from aws_dl_utils.dl_output.dl_producers_output import DlProducersOutput
+
 from aws_dl_utils.models.cdk_config import CdkAppConfig
 from aws_dl_utils.models.cdk_output import (
     BucketOutput,
     KmsKeyOutput,
+    LambdaOutput,
 )
 from constructs import Construct
 
@@ -40,11 +48,12 @@ class LambdasComponent(Construct):
         bucket_raw: BucketOutput,
         bucket_gold: BucketOutput,
         kms_key_s3: KmsKeyOutput,
+        kms_federated_glue_key: KmsKeyOutput,
+        lambda_alerting_function: LambdaOutput,
         env: str,
     ) -> None:
         super().__init__(scope, id_)
 
-        dl_commons_output = DlCommonsOutput(construct=self)
 
         lambda_name = app_config.application_name
         lambda_name_weekly = f"{lambda_name}_weekly"
@@ -88,7 +97,10 @@ class LambdasComponent(Construct):
                     "kms:ReEncrypt*",
                     "kms:GenerateDataKey*",
                 ],
-                resources=[kms_key_s3.arn],
+                resources=[
+                    kms_key_s3.arn,
+                    kms_federated_glue_key.arn,  # "arn:aws:kms:eu-west-1:936417342003:key/c1e03198-b540-45da-a4ea-1d056e16beb7"
+                ],
             ),
             iam.PolicyStatement(
                 effect=iam.Effect.ALLOW,
@@ -165,6 +177,12 @@ class LambdasComponent(Construct):
             security_groups=[lambdas_security_group],
         )
 
+        bucket_raw.this.add_event_notification(
+            s3.EventType.OBJECT_CREATED,
+            s3_notifications.LambdaDestination(self.app_on_event),
+            s3.NotificationKeyFilter(prefix="morganstanley/primebrokerage"),
+        )
+
         self.app_weekly = aws_lambda.Function(
             scope=self,
             id="LambdaWeekly",
@@ -197,7 +215,7 @@ class LambdasComponent(Construct):
         logs.SubscriptionFilter(
             self,
             id="SubscriptionFilterToCFMAlerting",
-            destination=destinations.LambdaDestination(dl_commons_output.lambda_alerting.this, add_permissions=False),
+            destination=destinations.LambdaDestination(lambda_alerting_function.this, add_permissions=False),
             filter_pattern=FilterPattern.any_term("ERROR", "Error", "error"),
             log_group=log_group,
         )

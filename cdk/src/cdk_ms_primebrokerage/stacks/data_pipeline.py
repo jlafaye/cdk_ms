@@ -2,16 +2,28 @@ from typing import Any
 
 import cfm_cdk_utils_v2.utils.cfm_global_constants as cfm_global_constants
 from aws_dl_utils.dl_output.dl_commons_output import DlCommonsOutput
+from aws_dl_utils.dl_output.dl_federated_output import DlFederatedOutput
 from aws_dl_utils.dl_output.dl_producers_output import DlProducersOutput
 from aws_dl_utils.infra_output.infra_network_output import InfraNetworkOutput
 from aws_dl_utils.models.cdk_config import CdkAppConfig
 from aws_dl_utils.models.cdk_output import (
     BucketOutput,
     KmsKeyOutput,
+    LambdaOutput,
 )
 from aws_dl_utils.models.dl_stack import DlBaseStack
 from constructs import Construct
-
+from aws_cdk import (
+    aws_ec2 as ec2,
+    aws_iam as iam,
+    aws_lambda as aws_lambda,
+    aws_logs as logs,
+    aws_kms as kms,
+    aws_s3 as s3,
+    aws_s3_notifications as s3_notifications,
+    Duration,
+    RemovalPolicy,
+)
 from cdk_ms_primebrokerage.components.lambdas.infrastructure import LambdasComponent
 
 
@@ -39,6 +51,11 @@ class DataPipelineStack(DlBaseStack):
 
         dl_commons_output = DlCommonsOutput(construct=self)
         kms_key_s3: KmsKeyOutput = dl_commons_output.kms_key_s3
+        lambda_alerting_function: LambdaOutput = dl_commons_output.lambda_alerting
+
+        dl_federated_output = DlFederatedOutput(construct=self)
+        kms_federated_glue_key = dl_federated_output.kms_key_glue
+
         dl_producers_output = DlProducersOutput(construct=self)
         bucket_raw: BucketOutput = dl_producers_output.bucket_raw
         bucket_gold: BucketOutput = dl_producers_output.bucket_gold
@@ -50,6 +67,8 @@ class DataPipelineStack(DlBaseStack):
             bucket_raw=bucket_raw,
             bucket_gold=bucket_gold,
             kms_key_s3=kms_key_s3,
+            kms_federated_glue_key=kms_federated_glue_key,
+            lambda_alerting_function=lambda_alerting_function,
             vpc=vpc,
             public_subnets=private_subnets,
             env=self.stack_config.env,
