@@ -114,6 +114,14 @@ class LambdasComponent(Construct):
                 ],
                 resources=[bucket_raw.this.arn_for_objects("*"), bucket_gold.this.arn_for_objects("*")],
             ),
+            iam.PolicyStatement(
+                effect=iam.Effect.ALLOW,
+                actions=[
+                    "glue:*",
+                    "lakeformation:*",
+                ],
+                resources=["*"],
+            ),
         ]
 
         lambda_runtime_role = iam.Role(
